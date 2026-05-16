@@ -21,11 +21,27 @@ const app = Fastify({
 });
 
 await app.register(cors, {
-  origin: [env.FRONTEND_URL, "http://localhost:3000"],
+  origin: (origin, cb) => {
+    if (!origin) {
+      cb(null, true);
+      return;
+    }
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    const allowedOrigins = [
+      env.FRONTEND_URL.replace(/\/$/, ""),
+      "http://localhost:3000"
+    ];
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error("Not allowed by CORS"), false);
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 });
+
 
 await app.register(rateLimit);
 await app.register(jwt, {
