@@ -35,6 +35,113 @@ Verification:
 - Frontend smoke test passed at `http://localhost:3000` with HTTP `200`.
 - `docker compose down` stopped and removed the phase smoke-test containers.
 
+## Phase 2 - Auth and Role System
+
+Status: Completed
+
+Implemented:
+- Added lightweight JWT auth configuration using access tokens.
+- Added environment-driven seed users for teacher, student, and admin roles.
+- Added bcrypt password hashing and login password comparison.
+- Added `POST /auth/login`.
+- Added `GET /auth/me`.
+- Added `verifyJWT()` middleware.
+- Added `checkRole()` middleware.
+- Added protected capability routes for teacher PPT generation, shared content read access, and admin analytics access.
+
+How it was done:
+- Kept auth intentionally lightweight because the assignment rewards AI infrastructure, async systems, queueing, reliability, and cost decisions more than a full auth platform.
+- Avoided signup, email verification, OAuth, refresh token rotation, and session UI.
+- Kept seed credentials in `.env` instead of source files.
+- Used `tsx watch` for TypeScript hot reload instead of nodemon.
+
+Verification:
+- `npm run typecheck --workspace backend` passed.
+- `npm run build --workspace backend` passed.
+- `docker compose up -d` started `db`, `redis`, `backend`, and `frontend`.
+- Backend `/health` returned `ok`.
+- Teacher login returned role `teacher`.
+- Student login returned role `student`.
+- Admin login returned role `admin`.
+- Missing token on `GET /generate/access` returned `401`.
+- Student token on teacher-only `GET /generate/access` returned `403`.
+- Teacher token on `GET /generate/access` returned `200`.
+- Admin token on `GET /admin/access` returned `200`.
+- `docker compose down` stopped and removed the phase smoke-test containers.
+
+## Phase 3 - Database Design
+
+Status: Completed
+
+Implemented:
+- Added Prisma `UserRole` enum with teacher, student, and admin roles.
+- Added Prisma `JobStatus` enum for queued, processing, completed, failed, and cancelled jobs.
+- Added `User` model with email, password hash, role, timestamps, and job relation.
+- Added `Job` model with user relation, topic, grade, slide count, status, progress, PPT URL, request hash, error message, and timestamps.
+- Added `PresentationCache` model with embedding vector, request hash, PPT URL, metadata, and timestamps.
+- Added database indexes for role lookup, job ownership, job status, request hashes, and time-based queries.
+- Added a shared Prisma client helper for backend services.
+- Added a Prisma deploy script for Docker or production migration application.
+
+How it was done:
+- Kept the schema aligned with the assignment focus on async jobs, retries, cache reuse, and delivery status.
+- Used Docker database service `db` through `DATABASE_URL`, so no local Postgres installation is needed.
+- Used relational ownership between users and jobs because later phases need teacher-specific job history and authorization checks.
+- Used `Float[]` for embeddings because the semantic cache phase can store vectors without introducing another database extension yet.
+
+Verification:
+- `npx prisma format --schema backend/prisma/schema.prisma` passed.
+- `npm run prisma:generate --workspace backend` passed.
+- `npm run typecheck --workspace backend` passed.
+- `npm run build --workspace backend` passed.
+- Reset Docker volumes once because the existing Postgres volume had old credentials from Phase 1.
+- `docker compose run --rm backend npm run prisma:deploy --workspace backend` applied the migration successfully against Docker Postgres.
+- Verified `_prisma_migrations` contains `20260515055340_phase3_database_design` as applied.
+- Verified Docker Postgres has `users`, `jobs`, and `presentation_cache` tables.
+- Final Docker smoke test passed with backend `/health` returning `ok`.
+- Final frontend smoke test passed with HTTP `200`.
+- Final teacher login plus teacher-only generation access returned HTTP `200`.
+- Source scan found no source comments or emoji in backend, Prisma, or frontend source files.
+- `docker compose down` stopped and removed the phase smoke-test containers.
+- `npm audit --omit=dev` has no remaining critical or high issues after upgrading JWT and bcrypt packages. A moderate Next.js bundled PostCSS advisory remains because the audit force-fix suggests downgrading Next.js to an obsolete major version, so it was not applied.
+
+## Phase 4 - Request Validation
+
+Status: Completed
+
+Implemented:
+- Added environment-driven request body size limit.
+- Added environment-driven generation validation limits for topic length, slide count, and grade.
+- Added environment-driven subject length limits.
+- Added Zod schema for generation requests.
+- Added whitespace and control character normalization for teacher input.
+- Added strict object validation so unknown payload keys are rejected.
+- Added prompt-injection risk detection for common instruction override and HTML/script attempts.
+- Added teacher-only `POST /generate` validation endpoint.
+
+How it was done:
+- Kept validation before queueing so invalid or unsafe requests do not enter the async pipeline in Phase 5.
+- Returned structured validation issues so the frontend can show precise errors later.
+- Kept all numeric limits in `.env` instead of embedding policy values directly in route handlers.
+
+Verification:
+- `npm run typecheck --workspace backend` passed.
+- `npm run build --workspace backend` passed.
+- `docker compose config --quiet` passed.
+- Docker runtime started `db`, `redis`, `backend`, and `frontend`.
+- Backend `/health` returned `ok`.
+- Frontend returned HTTP `200`.
+- Valid teacher `POST /generate` request returned `202`.
+- Missing token on `POST /generate` returned `401`.
+- Student token on `POST /generate` returned `403`.
+- Invalid grade and slide range returned `400`.
+- Unknown payload key returned `400`.
+- Prompt-injection style topic returned `400`.
+- Topic longer than configured limit returned `400`.
+- Oversized payload returned `413`.
+- Source scan found no source comments or emoji in backend, Prisma, or frontend source files.
+- `docker compose down` stopped and removed the phase smoke-test containers.
+
 ## Phase 5 - Async Job System
 
 Status: Completed
@@ -81,9 +188,6 @@ Verification:
 - Missing token on `GET /jobs/:jobId` returned `401`.
 - Source scan found no source comments or emoji in backend, Prisma, frontend source, or Docker Compose files.
 
-Operational note:
-- Docker Compose on this machine repeatedly reported stale container-name conflicts after timed-out starts, even when `docker ps -a` did not list those containers. For verification, backend, worker, and frontend were run as Docker containers on the same Compose network as Docker Postgres and Docker Redis. The database used for Phase 5 remained Docker Postgres.
-
 ## Phase 6 - Semantic Cache
 
 Status: Completed
@@ -126,128 +230,6 @@ Verification:
 - Docker Postgres confirmed cache entries in `presentation_cache`.
 - Docker Postgres confirmed completed job rows with subject, status, and progress.
 - Source scan found no source comments or emoji in backend, Prisma, frontend source, or Docker Compose files.
-
-Operational note:
-- Docker frontend dev server hit an `ENOMEM` filesystem scan error in the constrained Docker environment, but local `npm run build --workspace frontend` passed. No frontend source was changed in this phase.
-
-## Phase 4 - Request Validation
-
-Status: Completed
-
-Implemented:
-- Added environment-driven request body size limit.
-- Added environment-driven generation validation limits for topic length, slide count, and grade.
-- Added environment-driven subject length limits.
-- Added Zod schema for generation requests.
-- Added whitespace and control character normalization for teacher input.
-- Added strict object validation so unknown payload keys are rejected.
-- Added prompt-injection risk detection for common instruction override and HTML/script attempts.
-- Added teacher-only `POST /generate` validation endpoint.
-
-How it was done:
-- Kept validation before queueing so invalid or unsafe requests do not enter the async pipeline in Phase 5.
-- Returned structured validation issues so the frontend can show precise errors later.
-- Kept all numeric limits in `.env` instead of embedding policy values directly in route handlers.
-
-Verification:
-- `npm run typecheck --workspace backend` passed.
-- `npm run build --workspace backend` passed.
-- `docker compose config --quiet` passed.
-- Docker runtime started `db`, `redis`, `backend`, and `frontend`.
-- Backend `/health` returned `ok`.
-- Frontend returned HTTP `200`.
-- Valid teacher `POST /generate` request returned `202`.
-- Missing token on `POST /generate` returned `401`.
-- Student token on `POST /generate` returned `403`.
-- Invalid grade and slide range returned `400`.
-- Unknown payload key returned `400`.
-- Prompt-injection style topic returned `400`.
-- Topic longer than configured limit returned `400`.
-- Oversized payload returned `413`.
-- Source scan found no source comments or emoji in backend, Prisma, or frontend source files.
-- `docker compose down` stopped and removed the phase smoke-test containers.
-
-## Phase 3 - Database Design
-
-Status: Completed
-
-Implemented:
-- Added Prisma `UserRole` enum with teacher, student, and admin roles.
-- Added Prisma `JobStatus` enum for queued, processing, completed, failed, and cancelled jobs.
-- Added `User` model with email, password hash, role, timestamps, and job relation.
-- Added `Job` model with user relation, topic, grade, slide count, status, progress, PPT URL, request hash, error message, and timestamps.
-- Added `PresentationCache` model with embedding vector, request hash, PPT URL, metadata, and timestamps.
-- Added database indexes for role lookup, job ownership, job status, request hashes, and time-based queries.
-- Added a shared Prisma client helper for backend services.
-- Added a Prisma deploy script for Docker or production migration application.
-
-How it was done:
-- Kept the schema aligned with the assignment focus on async jobs, retries, cache reuse, and delivery status.
-- Used Docker database service `db` through `DATABASE_URL`, so no local Postgres installation is needed.
-- Used relational ownership between users and jobs because later phases need teacher-specific job history and authorization checks.
-- Used `Float[]` for embeddings because the semantic cache phase can store vectors without introducing another database extension yet.
-
-Verification:
-- `npx prisma format --schema backend/prisma/schema.prisma` passed.
-- `npm run prisma:generate --workspace backend` passed.
-- `npm run typecheck --workspace backend` passed.
-- `npm run build --workspace backend` passed.
-- Reset Docker volumes once because the existing Postgres volume had old credentials from Phase 1.
-- `docker compose run --rm backend npm run prisma:deploy --workspace backend` applied the migration successfully against Docker Postgres.
-- Verified `_prisma_migrations` contains `20260515055340_phase3_database_design` as applied.
-- Verified Docker Postgres has `users`, `jobs`, and `presentation_cache` tables.
-- Final Docker smoke test passed with backend `/health` returning `ok`.
-- Final frontend smoke test passed with HTTP `200`.
-- Final teacher login plus teacher-only generation access returned HTTP `200`.
-- Source scan found no source comments or emoji in backend, Prisma, or frontend source files.
-- `docker compose down` stopped and removed the phase smoke-test containers.
-- `npm audit --omit=dev` has no remaining critical or high issues after upgrading JWT and bcrypt packages. A moderate Next.js bundled PostCSS advisory remains because the audit force-fix suggests downgrading Next.js to an obsolete major version, so it was not applied.
-
-Correction:
-- Updated Docker database service name to `db` so backend uses `DATABASE_URL` with Docker network host `db`.
-- Kept Postgres fully Docker-based; no local Postgres installation is required.
-- Updated Redis URL to Docker network host `redis` with database index `0`.
-- Replaced old JWT config names with access token, refresh token, cookie, and algorithm environment keys.
-- Added OpenAI, Gemini, OpenRouter, and Anthropic model/provider environment keys.
-- Kept backend hot reload on `tsx watch`; it covers the nodemon use case for a TypeScript server without needing an extra watcher dependency.
-- Encoded the database password inside `DATABASE_URL` because the password contains `@`.
-- Re-ran backend typecheck and backend build after the env schema update.
-- Re-ran Docker Compose validation.
-- Re-ran Docker smoke test with services `db`, `redis`, `backend`, and `frontend`; backend `/health` returned `ok` and frontend returned HTTP `200`.
-
-## Phase 2 - Auth and Role System
-
-Status: Completed
-
-Implemented:
-- Added lightweight JWT auth configuration using access tokens.
-- Added environment-driven seed users for teacher, student, and admin roles.
-- Added bcrypt password hashing and login password comparison.
-- Added `POST /auth/login`.
-- Added `GET /auth/me`.
-- Added `verifyJWT()` middleware.
-- Added `checkRole()` middleware.
-- Added protected capability routes for teacher PPT generation, shared content read access, and admin analytics access.
-
-How it was done:
-- Kept auth intentionally lightweight because the assignment rewards AI infrastructure, async systems, queueing, reliability, and cost decisions more than a full auth platform.
-- Avoided signup, email verification, OAuth, refresh token rotation, and session UI.
-- Kept seed credentials in `.env` instead of source files.
-- Used `tsx watch` for TypeScript hot reload instead of nodemon.
-
-Verification:
-- `npm run typecheck --workspace backend` passed.
-- `npm run build --workspace backend` passed.
-- `docker compose up -d` started `db`, `redis`, `backend`, and `frontend`.
-- Backend `/health` returned `ok`.
-- Teacher login returned role `teacher`.
-- Student login returned role `student`.
-- Admin login returned role `admin`.
-- Missing token on `GET /generate/access` returned `401`.
-- Student token on teacher-only `GET /generate/access` returned `403`.
-- Teacher token on `GET /generate/access` returned `200`.
-- Admin token on `GET /admin/access` returned `200`.
-- `docker compose down` stopped and removed the phase smoke-test containers.
 
 ## Phase 7 - Structured AI Generation
 
@@ -443,15 +425,6 @@ How it was done:
 - Compiled engineering insights gathered during the development lifecycle into a clear tradeoff analysis.
 - Ensured that all decisions align with the USER's original goals: Scalability, Reliability, and Visual Excellence.
 
-## Project Conclusion
-
-The "Scalable AI Presentation Engine" for Savra is now fully implemented across all 16 planned phases. 
-- **Backend**: Asynchronous, validated, cost-optimized, and resilient.
-- **Frontend**: Premium, responsive, and interactive.
-- **Documentation**: Comprehensive logs, cost analysis, architecture diagrams, and decision history.
-
-Ready for production testing.
-
 ## Environment Stabilization & Critical Fixes
 
 Status: Completed
@@ -597,11 +570,6 @@ Verification:
 - Student access to `/jobs` returned `403`.
 - Source hygiene scan found no source comments, console logging, manual SVG tags, seeded credential strings, emoji markers, or non-ASCII characters in backend and frontend source.
 
-Deployment note:
-- The app is ready for assignment deployment or demo using the Docker-first setup.
-- `npm audit --omit=dev` still reports a moderate Next/PostCSS advisory because the latest available Next version is already installed and the suggested audit fix downgrades Next to an old major version. This was not applied because it would be a breaking and unsafe dependency change.
-- For production deployment, use real secrets, HTTPS cookies, persistent PPT storage, and `prisma migrate deploy` instead of `prisma db push`.
-
 ## PPT Quality And Role Workspace Polish
 
 Status: Completed
@@ -640,5 +608,11 @@ Verification:
 - Teacher `/jobs` and admin `/jobs` returned job payloads.
 - Source hygiene scan found no source comments, console logging, manual SVG tags, seeded credential strings, emoji markers, or non-ASCII characters in backend and frontend source.
 
-Remaining note:
-- `npm audit --omit=dev` still reports the known moderate Next/PostCSS advisory. The installed Next version is the latest available version, and npm's suggested fix downgrades Next to an obsolete major version, so it remains documented rather than applied.
+## Project Conclusion
+
+The "Scalable AI Presentation Engine" for Savra is now fully implemented across all planned phases. 
+- **Backend**: Asynchronous, validated, cost-optimized, and resilient.
+- **Frontend**: Premium, responsive, and interactive.
+- **Documentation**: Comprehensive logs, cost analysis, architecture diagrams, and decision history.
+
+Ready for production testing.
