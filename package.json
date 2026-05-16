@@ -10,7 +10,7 @@
     "dev:local": "npm run dev --workspace backend & npm run dev --workspace frontend",
     "build": "npm run prisma:generate && npm run build --workspace backend && npm run build --workspace frontend",
     "start": "npm run start:backend",
-    "start:backend": "npm start --workspace backend",
+    "start:backend": "npx prisma db push --schema=backend/prisma/schema.prisma --accept-data-loss && npm start --workspace backend",
     "start:frontend": "npm start --workspace frontend",
     "start:worker": "npm run worker --workspace backend",
     "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
