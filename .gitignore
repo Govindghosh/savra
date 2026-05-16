@@ -1,0 +1,10 @@
+node_modules
+backend/dist
+frontend/.next
+backend/node_modules
+frontend/node_modules
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+npm-debug.log

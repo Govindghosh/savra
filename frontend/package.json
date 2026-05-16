@@ -1,0 +1,28 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H ${FRONTEND_HOST} -p ${FRONTEND_PORT}",
+    "build": "next build",
+    "start": "next start -H ${FRONTEND_HOST} -p ${FRONTEND_PORT}",
+    "lint": "next lint",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.76.1",
+    "axios": "^1.9.0",
+    "lucide-react": "^0.511.0",
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.0",
+    "@types/node": "^22.15.18",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^5.8.3"
+  }
+}
