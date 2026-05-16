@@ -7,7 +7,8 @@ dotenv.config();
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
   BACKEND_PORT: z.coerce.number().int().positive(),
-  BACKEND_HOST: z.string().min(1),
+  BACKEND_HOST: z.string().default("0.0.0.0"),
+  FRONTEND_URL: z.string().min(1).default("http://localhost:3000"),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   JWT_ALGORITHM: z.literal("HS256"),
