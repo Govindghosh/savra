@@ -35,8 +35,26 @@ The detailed design document can be found in [architecture/design-doc.md](./arch
 - **WebSockets**: Used polling for progress as it's more resilient and easier to scale horizontally without sticky sessions.
 - **AI Image Generation**: Focused on structural and content reliability first; images can be added as a separate worker task.
 
-## 🛠 Setup
+## 🌐 Live Deployment
+
+- **Frontend**: [https://savra-frontend.vercel.app/](https://savra-frontend.vercel.app/)
+- **Backend**: [https://savra-production-b9b9.up.railway.app](https://savra-production-b9b9.up.railway.app)
+
+## 🔑 Demo Credentials
+
+You can use the following credentials to explore the platform:
+
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Admin** | `admin@test.com` | `admin123` |
+| **Teacher** | `teacher@test.com` | `teacher123` |
+| **Student** | `student@test.com` | `student123` |
+
+---
+
+## 🛠 Local Setup
 
 1. Configure `.env` in both `frontend` and `backend` (see `.env.example`).
 2. Run `docker-compose up --build`.
-3. Login with seed credentials (see `.env`).
+3. Access the platform at `http://localhost:3000`.
+
