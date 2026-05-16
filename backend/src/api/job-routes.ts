@@ -33,7 +33,7 @@ export async function registerJobRoutes(app: FastifyInstance) {
       ]);
 
       return {
-        jobs: jobs.map((job) => serializeJob(job)),
+        jobs: jobs.map((job: any) => serializeJob(job)),
         summary
       };
     }

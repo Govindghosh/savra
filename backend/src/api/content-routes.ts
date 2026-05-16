@@ -54,7 +54,7 @@ export async function registerContentRoutes(app: FastifyInstance) {
         role: request.user.role,
         capabilities: getRoleCapabilities(request.user.role),
         materials: studyMaterials,
-        presentations: presentations.map((job) => ({
+        presentations: presentations.map((job: any) => ({
           id: job.id,
           title: job.topic,
           subject: job.subject,
