@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
 import path from "node:path";
-import { config as loadEnv } from "dotenv";
+try {
+  const { config: loadEnv } = await import("dotenv");
+  loadEnv({ path: path.resolve(process.cwd(), "../.env") });
+} catch (e) {
+  // dotenv not found, probably production
+}
 
-loadEnv({ path: path.resolve(process.cwd(), "../.env") });
 
 const nextConfig: NextConfig = {
   env: {
