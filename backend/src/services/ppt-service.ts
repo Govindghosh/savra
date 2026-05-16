@@ -4,7 +4,8 @@ import JSZip from "jszip";
 import { PptRenderer } from "../ppt/renderer.js";
 import type { StructuredSlide } from "../validators/ai-output.js";
 
-const FILES_DIR = path.join(process.cwd(), "public", "files");
+const FILES_DIR = "/app/public/files";
+
 
 function createSlug(value: string) {
   return value

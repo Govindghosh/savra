@@ -51,7 +51,7 @@ await app.register(jwt, {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const publicFilesPath = path.join(process.cwd(), "public", "files");
+const publicFilesPath = "/app/public/files";
 if (!fs.existsSync(publicFilesPath)) {
   fs.mkdirSync(publicFilesPath, { recursive: true });
 }
