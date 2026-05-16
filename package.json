@@ -12,7 +12,7 @@
     "start": "npm run start:backend",
     "start:backend": "npx prisma db push --schema=backend/prisma/schema.prisma --accept-data-loss && npm start --workspace backend",
     "start:frontend": "npm start --workspace frontend",
-    "start:worker": "npm run worker --workspace backend",
+    "start:worker": "npm run worker:start --workspace backend",
     "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
     "typecheck": "npm run typecheck --workspace backend && npm run typecheck --workspace frontend",
     "prisma:generate": "npm run prisma:generate --workspace backend"
